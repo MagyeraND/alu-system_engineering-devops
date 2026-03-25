@@ -1,8 +1,30 @@
 #!/usr/bin/env bash
-# Installs and configures HAProxy for round-robin load balancing
+# Installs HAProxy and configures round-robin balancing
 apt-get update -y
 apt-get install haproxy -y
-cat << 'EOC' >> /etc/haproxy/haproxy.cfg
+
+# Enable HAProxy to be started by the init script
+echo "ENABLED=1" > /etc/default/haproxy
+
+# Create a clean config
+cat << 'EOC' > /etc/haproxy/haproxy.cfg
+global
+    log /dev/log local0
+    log /dev/log local1 notice
+    chroot /var/lib/haproxy
+    user haproxy
+    group haproxy
+    daemon
+
+defaults
+    log global
+    mode http
+    option httplog
+    option dontlognull
+    timeout connect 5000
+    timeout client 50000
+    timeout server 50000
+
 frontend alu_lb
     bind *:80
     default_backend web_servers
@@ -12,4 +34,5 @@ backend web_servers
     server web-01 <web-01_IP>:80 check
     server web-02 <web-02_IP>:80 check
 EOC
+
 service haproxy restart
